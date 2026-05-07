@@ -50,6 +50,7 @@ class VideoController:
 
         video_name = self.create_file_name('avi')
 
+        # 코덱 1 : XVID
         codec = cv2.VideoWriter_fourcc(*'XVID')
 
         self.writer = cv2.VideoWriter(
@@ -80,6 +81,13 @@ class VideoController:
         if not self.is_opened:
             return
 
+        print('\n===== 단축키 안내 =====')
+        print('ESC      : 프로그램 종료')
+        print('Ctrl+Z   : 이미지 캡처')
+        print('Ctrl+X   : 녹화 시작')
+        print('Ctrl+C   : 녹화 종료')
+        print('======================\n')
+
         while True:
             success, frame = self.capture.read()
 
@@ -92,7 +100,7 @@ class VideoController:
             if self.is_recording and self.writer is not None:
                 self.writer.write(frame)
 
-            key = cv2.waitKey(33)
+            key = cv2.waitKey(33) & 0xFF
 
             # ESC
             if key == 27:
@@ -107,12 +115,10 @@ class VideoController:
             elif key == 24:
                 self.start_recording()
 
-            # Ctrl + C
-            elif key == 3:
+            # C 키
+            elif key == ord('c'):
                 self.stop_recording()
-
-        self.release()
-
+                
     def release(self):
         self.capture.release()
 
@@ -133,6 +139,7 @@ class CameraViewer:
 
         self.is_opened = True
 
+        # 해상도 설정
         self.capture.set(
             cv2.CAP_PROP_FRAME_WIDTH,
             640
@@ -147,6 +154,10 @@ class CameraViewer:
         if not self.is_opened:
             return
 
+        print('\n===== 카메라 실행 =====')
+        print('ESC 키를 누르면 종료됩니다.')
+        print('=======================\n')
+
         while True:
             success, frame = self.capture.read()
 
@@ -156,9 +167,10 @@ class CameraViewer:
 
             cv2.imshow('Camera Viewer', frame)
 
-            key = cv2.waitKey(33)
+            key = cv2.waitKey(33) & 0xFF
 
             if key == 27:
+                print('카메라 종료')
                 break
 
         self.capture.release()
@@ -175,7 +187,11 @@ def show_image(image_path):
 
     cv2.imshow('Image Viewer', image)
 
-    cv2.waitKey(33)
+    print('\n===== 이미지 출력 =====')
+    print('아무 키나 누르면 창이 닫힙니다.')
+    print('=======================\n')
+
+    cv2.waitKey(0)
 
     cv2.destroyAllWindows()
 
@@ -184,16 +200,20 @@ def main():
     image_path = 'apple.jpg'
     video_path = 'video.mp4'
 
-    print('===== 이미지 출력 =====')
+    print('===== OpenCV 과제 시작 =====')
+
+    # 이미지 출력
     show_image(image_path)
 
-    print('===== 영상 재생 =====')
+    # 영상 재생 및 제어
     controller = VideoController(video_path)
     controller.play_video()
 
-    print('===== 카메라 출력 =====')
+    # 카메라 출력
     camera = CameraViewer()
     camera.show_camera()
+
+    print('===== 프로그램 종료 =====')
 
 
 if __name__ == '__main__':
