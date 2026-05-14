@@ -85,7 +85,7 @@ class VideoController:
         print('ESC      : 프로그램 종료')
         print('Ctrl+Z   : 이미지 캡처')
         print('Ctrl+X   : 녹화 시작')
-        print('Ctrl+C   : 녹화 종료')
+        print('C   : 녹화 종료')
         print('======================\n')
 
         while True:
