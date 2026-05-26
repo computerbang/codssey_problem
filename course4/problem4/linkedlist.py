@@ -1,230 +1,238 @@
-# pip install nava
-
-from nava import play, stop
-import time
-
-## 글로벌 변수 선언
-head = None
-posHEAD = 0  # 리스트 처음 위치
-posTAIL = 1  # 리스트 마지막 위치
-poseNODE = 2  # 리스트 중간 위치
-
-
 class Node:
-    def __init__(self, data, filepath=None):
-        self.data = data          # 곡 이름
-        self.filepath = filepath  # 음악 파일 경로 (.wav)
+    def __init__(self, data):
+        self.data = data
         self.next = None
 
 
-class linkedlist:
+class LinkedList:
     def __init__(self):
         self.head = None
 
-    def insert(self, data, position=posHEAD, node=None, filepath=None):
-        global head
-        new_node = Node(data, filepath)
+    def insert(self, data, index=None):
+        new_node = Node(data)
 
-        # 1. 리스트가 비어있는 경우
-        if head is None:
-            head = new_node
+        if self.head is None:
+            self.head = new_node
             return
 
-        # 2. 리스트의 처음에 삽입하는 경우
-        if position == posHEAD:
-            new_node.next = head
-            head = new_node
+        if index == 0:
+            new_node.next = self.head
+            self.head = new_node
             return
 
-        # 3. 리스트의 마지막에 삽입하는 경우
-        if position == posTAIL:
-            current = head
+        current = self.head
+        position = 0
+
+        if index is None:
             while current.next is not None:
                 current = current.next
             current.next = new_node
             return
 
-        # 4. 리스트의 중간에 삽입하는 경우
-        if position == poseNODE:
-            if node is None:
-                raise ValueError("중간 위치에 삽입하려면 노드를 지정해야 합니다.")
-            current = head
-            while current is not None and current.data != node.data:
-                current = current.next
-            if current is None:
-                raise ValueError("지정된 노드를 찾을 수 없습니다.")
-            new_node.next = current.next
-            current.next = new_node
+        while current.next is not None and position < index - 1:
+            current = current.next
+            position += 1
 
-    def delete(self, position=posHEAD, node=None):
-        global head
+        new_node.next = current.next
+        current.next = new_node
 
-        # 1. 리스트가 비어있는 경우
-        if head is None:
-            raise ValueError("리스트가 비어있습니다.")
+    def delete(self, data):
+        if self.head is None:
+            return False
 
-        # 2. 리스트의 처음을 삭제하는 경우
-        if position == posHEAD:
-            head = head.next
-            return
+        if self.head.data == data:
+            self.head = self.head.next
+            return True
 
-        # 3. 리스트의 마지막을 삭제하는 경우
-        if position == posTAIL:
-            current = head
-            prev = None
-            while current.next is not None:
-                prev = current
-                current = current.next
-            if prev is not None:
-                prev.next = None
-            else:
-                head = None
-            return
+        current = self.head
 
-        # 4. 리스트의 중간을 삭제하는 경우
-        if position == poseNODE:
-            if node is None:
-                raise ValueError("중간 위치에서 삭제하려면 노드를 지정해야 합니다.")
-            current = head
-            prev = None
-            while current is not None and current.data != node.data:
-                prev = current
-                current = current.next
-            if current is None:
-                raise ValueError("지정된 노드를 찾을 수 없습니다.")
-            if prev is not None:
-                prev.next = current.next
-            else:
-                head = current.next
+        while current.next is not None:
+            if current.next.data == data:
+                current.next = current.next.next
+                return True
+            current = current.next
+
+        return False
 
     def get_list(self):
-        """처음부터 끝까지 순차적으로 가져오는 함수 (보너스 과제)"""
-        global head
         result = []
-        current = head
-        idx = 1
-        while current:
-            result.append(f"{idx}. {current.data}")
+        current = self.head
+
+        while current is not None:
+            result.append(current.data)
             current = current.next
-            idx += 1
+
         return result
 
-    def display(self):
-        global head
-        current = head
-        if current is None:
-            print("  리스트가 비어있습니다.")
+
+class CircularList:
+    def __init__(self):
+        self.head = None
+        self.current = None
+
+    def insert(self, data, index=None):
+        new_node = Node(data)
+
+        if self.head is None:
+            self.head = new_node
+            new_node.next = self.head
+            self.current = self.head
             return
-        idx = 1
-        while current:
-            marker = "♪" if current.filepath else "♩"
-            print(f"  {marker} {idx}. {current.data}")
-            current = current.next
-            idx += 1
 
-    def play_song(self, song_name):
-        """nava를 사용하여 특정 곡 재생"""
-        global head
-        current = head
-        while current is not None:
-            if current.data == song_name:
-                if current.filepath:
-                    print(f"  ▶ 재생 중: {current.data}")
-                    try:
-                        play(current.filepath)
-                    except Exception as e:
-                        print(f"  ⚠ 재생 오류: {e}")
-                else:
-                    print(f"  ⚠ '{current.data}'에 음악 파일이 지정되지 않았습니다.")
-                return
-            current = current.next
-        print(f"  ⚠ '{song_name}'을(를) 찾을 수 없습니다.")
+        if index == 0:
+            tail = self.head
 
-    def play_all(self, duration=3):
-        """전체 플레이리스트 순차 재생 (각 곡 duration초)"""
-        global head
-        current = head
-        if current is None:
-            print("  리스트가 비어있습니다.")
+            while tail.next != self.head:
+                tail = tail.next
+
+            new_node.next = self.head
+            tail.next = new_node
+            self.head = new_node
             return
-        while current:
-            if current.filepath:
-                print(f"  ▶ 재생 중: {current.data}")
-                try:
-                    sound_id = play(current.filepath, async_mode=True)
-                    time.sleep(duration)
-                    stop(sound_id)
-                except Exception as e:
-                    print(f"  ⚠ 재생 오류: {e}")
-            else:
-                print(f"  ⏭ 건너뜀 (파일 없음): {current.data}")
+
+        current = self.head
+        position = 0
+
+        if index is None:
+            while current.next != self.head:
+                current = current.next
+
+            current.next = new_node
+            new_node.next = self.head
+            return
+
+        while current.next != self.head and position < index - 1:
             current = current.next
-        print("  ■ 재생 완료")
+            position += 1
 
-    def load_list(self, filename):
-        try:
-            with open(filename, 'r') as file:
-                for line in file:
-                    self.insert(line.strip(), position=posTAIL)
-            print(f"  {filename}에서 데이터를 성공적으로 불러왔습니다.")
-        except FileNotFoundError:
-            print(f"  {filename} 파일을 찾을 수 없습니다.")
-        except Exception as e:
-            print(f"  데이터를 불러오는 중 오류가 발생했습니다: {e}")
+        new_node.next = current.next
+        current.next = new_node
+
+    def delete(self, data):
+        if self.head is None:
+            return False
+
+        if self.head.data == data:
+            if self.head.next == self.head:
+                self.head = None
+                self.current = None
+                return True
+
+            tail = self.head
+
+            while tail.next != self.head:
+                tail = tail.next
+
+            tail.next = self.head.next
+            self.head = self.head.next
+            self.current = self.head
+            return True
+
+        current = self.head
+
+        while current.next != self.head:
+            if current.next.data == data:
+                current.next = current.next.next
+                return True
+            current = current.next
+
+        return False
+
+    def get_next(self):
+        if self.current is None:
+            return None
+
+        data = self.current.data
+        self.current = self.current.next
+
+        return data
+
+    def search(self, data):
+        if self.head is None:
+            return -1
+
+        current = self.head
+        index = 0
+
+        while True:
+            if current.data == data:
+                return index
+
+            current = current.next
+            index += 1
+
+            if current == self.head:
+                break
+
+        return -1
+
+    def get_list(self):
+        result = []
+
+        if self.head is None:
+            return result
+
+        current = self.head
+
+        while True:
+            result.append(current.data)
+            current = current.next
+
+            if current == self.head:
+                break
+
+        return result
 
 
-# ====================================================
-# 테스트: 음악 플레이리스트
-# ====================================================
-if __name__ == "__main__":
-    pl = linkedlist()
+def main():
+    linkedlist = LinkedList()
 
-    print("=" * 50)
-    print("  음악 플레이리스트 - 단순 연결 리스트")
-    print("=" * 50)
+    linkedlist.insert('Ditto')
+    linkedlist.insert('Hype Boy')
+    linkedlist.insert('ETA')
+    linkedlist.insert('Super Shy', 0)
+    linkedlist.insert('OMG', 2)
 
-    # --- 곡 추가 (맨 끝에) ---
-    print("\n[1] 곡 3개 추가 (TAIL)")
-    pl.insert("Bohemian Rhapsody - Queen", posTAIL)
-    pl.insert("Hotel California - Eagles", posTAIL)
-    pl.insert("Imagine - John Lennon", posTAIL)
-    pl.display()
+    print('단순 연결 리스트 목록')
+    print(linkedlist.get_list())
 
-    # --- 곡 추가 (맨 앞에) ---
-    print("\n[2] 맨 앞에 추가 (HEAD)")
-    pl.insert("Billie Jean - Michael Jackson", posHEAD)
-    pl.display()
+    linkedlist.delete('ETA')
 
-    # --- 곡 추가 (중간에) ---
-    print("\n[3] 'Bohemian Rhapsody' 뒤에 삽입 (NODE)")
-    pl.insert("Yesterday - The Beatles", poseNODE,
-              node=Node("Bohemian Rhapsody - Queen"))
-    pl.display()
+    print('ETA 삭제 후')
+    print(linkedlist.get_list())
 
-    # --- 곡 삭제 (중간) ---
-    print("\n[4] 'Hotel California' 삭제 (NODE)")
-    pl.delete(poseNODE, node=Node("Hotel California - Eagles"))
-    pl.display()
+    circularlist = CircularList()
 
-    # --- 곡 삭제 (맨 앞) ---
-    print("\n[5] 맨 앞 곡 삭제 (HEAD)")
-    pl.delete(posHEAD)
-    pl.display()
+    circularlist.insert('Seven')
+    circularlist.insert('Love Lee')
+    circularlist.insert('Drama')
+    circularlist.insert('I AM')
+    circularlist.insert('Attention', 2)
 
-    # --- 곡 삭제 (맨 끝) ---
-    print("\n[6] 맨 끝 곡 삭제 (TAIL)")
-    pl.delete(posTAIL)
-    pl.display()
+    print('원형 연결 리스트 목록')
+    print(circularlist.get_list())
 
-    # --- 보너스: get_list() ---
-    print("\n[7] get_list() 결과:")
-    for item in pl.get_list():
-        print(f"  {item}")
+    print('순차 재생')
+    print(circularlist.get_next())
+    print(circularlist.get_next())
+    print(circularlist.get_next())
+    print(circularlist.get_next())
+    print(circularlist.get_next())
+    print(circularlist.get_next())
 
-    # --- nava 재생 예시 (wav 파일이 있을 때) ---
-    print("\n[8] nava 재생 테스트")
-    head = None  # 리스트 초기화
-    pl2 = linkedlist()
-    pl2.insert("sample_song", posTAIL, filepath="sample.wav")
-    pl2.play_song("sample_song")
-    # 파일이 없으면 오류 메시지 출력
+    search_title = 'Drama'
+    search_result = circularlist.search(search_title)
+
+    if search_result == -1:
+        print(search_title + '을 찾을 수 없습니다.')
+    else:
+        print(search_title + '의 위치는 ' + str(search_result) + '번입니다.')
+
+    circularlist.delete('Love Lee')
+
+    print('Love Lee 삭제 후')
+    print(circularlist.get_list())
+
+
+if __name__ == '__main__':
+    main()
