@@ -2,6 +2,14 @@ import cv2
 from datetime import datetime
 
 
+WAIT_TIME = 33
+
+ESC_KEY = 27
+CTRL_Z_KEY = 26
+CTRL_X_KEY = 24
+C_KEY = ord('c')
+
+
 class VideoController:
     def __init__(self, video_path):
         self.video_path = video_path
@@ -29,11 +37,14 @@ class VideoController:
             cv2.CAP_PROP_FPS
         )
 
+        if self.fps <= 0:
+            self.fps = 30.0
+
     def create_file_name(self, extension):
         current_time = datetime.now()
 
         return current_time.strftime(
-            f'%Y-%m-%d_%H-%M-%S.{extension}'
+            f'%Y_%m_%d_%H-%M-%S.{extension}'
         )
 
     def capture_image(self, frame):
@@ -50,7 +61,6 @@ class VideoController:
 
         video_name = self.create_file_name('avi')
 
-        # 코덱 1 : XVID
         codec = cv2.VideoWriter_fourcc(*'XVID')
 
         self.writer = cv2.VideoWriter(
@@ -60,9 +70,15 @@ class VideoController:
             (self.width, self.height)
         )
 
+        if not self.writer.isOpened():
+            print('동영상 녹화 파일을 생성할 수 없습니다.')
+            self.writer = None
+            return
+
         self.is_recording = True
 
         print(f'녹화 시작: {video_name}')
+        print('사용 코덱: XVID')
 
     def stop_recording(self):
         if not self.is_recording:
@@ -85,7 +101,7 @@ class VideoController:
         print('ESC      : 프로그램 종료')
         print('Ctrl+Z   : 이미지 캡처')
         print('Ctrl+X   : 녹화 시작')
-        print('C   : 녹화 종료')
+        print('C        : 녹화 종료')
         print('======================\n')
 
         while True:
@@ -100,80 +116,33 @@ class VideoController:
             if self.is_recording and self.writer is not None:
                 self.writer.write(frame)
 
-            key = cv2.waitKey(33) & 0xFF
+            key = cv2.waitKey(WAIT_TIME) & 0xFF
 
-            # ESC
-            if key == 27:
+            if key == ESC_KEY:
                 print('프로그램 종료')
                 break
 
-            # Ctrl + Z
-            elif key == 26:
+            elif key == CTRL_Z_KEY:
                 self.capture_image(frame)
 
-            # Ctrl + X
-            elif key == 24:
+            elif key == CTRL_X_KEY:
                 self.start_recording()
 
-            # C 키
-            elif key == ord('c'):
+            elif key == C_KEY:
                 self.stop_recording()
-                
+
+        self.release()
+
     def release(self):
-        self.capture.release()
+        if self.is_recording:
+            self.stop_recording()
+
+        if self.capture is not None:
+            self.capture.release()
 
         if self.writer is not None:
             self.writer.release()
-
-        cv2.destroyAllWindows()
-
-
-class CameraViewer:
-    def __init__(self):
-        self.capture = cv2.VideoCapture(0)
-
-        if not self.capture.isOpened():
-            print('카메라를 열 수 없습니다.')
-            self.is_opened = False
-            return
-
-        self.is_opened = True
-
-        # 해상도 설정
-        self.capture.set(
-            cv2.CAP_PROP_FRAME_WIDTH,
-            640
-        )
-
-        self.capture.set(
-            cv2.CAP_PROP_FRAME_HEIGHT,
-            480
-        )
-
-    def show_camera(self):
-        if not self.is_opened:
-            return
-
-        print('\n===== 카메라 실행 =====')
-        print('ESC 키를 누르면 종료됩니다.')
-        print('=======================\n')
-
-        while True:
-            success, frame = self.capture.read()
-
-            if not success:
-                print('카메라 프레임을 읽을 수 없습니다.')
-                break
-
-            cv2.imshow('Camera Viewer', frame)
-
-            key = cv2.waitKey(33) & 0xFF
-
-            if key == 27:
-                print('카메라 종료')
-                break
-
-        self.capture.release()
+            self.writer = None
 
         cv2.destroyAllWindows()
 
@@ -196,22 +165,78 @@ def show_image(image_path):
     cv2.destroyAllWindows()
 
 
+def convert_video_with_codec(video_path, codec_name, extension):
+    capture = cv2.VideoCapture(video_path)
+
+    if not capture.isOpened():
+        print('동영상을 열 수 없습니다.')
+        return
+
+    width = int(
+        capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+    )
+
+    height = int(
+        capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    )
+
+    fps = capture.get(
+        cv2.CAP_PROP_FPS
+    )
+
+    if fps <= 0:
+        fps = 30.0
+
+    current_time = datetime.now()
+    output_name = current_time.strftime(
+        f'%Y_%m_%d_%H-%M-%S_{codec_name}.{extension}'
+    )
+
+    codec = cv2.VideoWriter_fourcc(*codec_name)
+
+    writer = cv2.VideoWriter(
+        output_name,
+        codec,
+        fps,
+        (width, height)
+    )
+
+    if not writer.isOpened():
+        print(f'{codec_name} 코덱으로 파일을 생성할 수 없습니다.')
+        capture.release()
+        return
+
+    while True:
+        success, frame = capture.read()
+
+        if not success:
+            break
+
+        writer.write(frame)
+
+    writer.release()
+    capture.release()
+
+    print(f'{codec_name} 코덱 저장 완료: {output_name}')
+
+
+def test_two_codecs(video_path):
+    convert_video_with_codec(video_path, 'XVID', 'avi')
+    convert_video_with_codec(video_path, 'mp4v', 'mp4')
+
+
 def main():
     image_path = 'apple.jpg'
     video_path = 'video.mp4'
 
     print('===== OpenCV 과제 시작 =====')
 
-    # 이미지 출력
     show_image(image_path)
 
-    # 영상 재생 및 제어
     controller = VideoController(video_path)
     controller.play_video()
 
-    # 카메라 출력
-    camera = CameraViewer()
-    camera.show_camera()
+    test_two_codecs(video_path)
 
     print('===== 프로그램 종료 =====')
 
